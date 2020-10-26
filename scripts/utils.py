@@ -36,10 +36,11 @@ def convert_img_dim(image):
     return image.reshape(image.shape[1], image.shape[2], image.shape[0])
 
 
-def get_overlay_rgb_image(rgb_image, mask):
+def get_overlay_rgb_image(rgb_image, mask, rgb_rate=0.6, mask_rate=0.4):
     mask_image = np.zeros((mask.shape[0], mask.shape[1], 3), dtype=np.uint8)
     nonzero_idx = np.where(mask>0)
     mask_image[nonzero_idx[0], nonzero_idx[1], :] = (0, 0, 255)
     rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-    segmentation_overlay_rgb = cv2.addWeighted(rgb_image, 0.6, mask_image, 0.4, 2.5)
+    segmentation_overlay_rgb = cv2.addWeighted(
+        rgb_image, rgb_rate, mask_image, mask_rate, 2.5)
     return segmentation_overlay_rgb
