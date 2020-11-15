@@ -5,10 +5,12 @@ from scripts.inference_manager import InferSegmentation
 import numpy as np
 import cv2
 
+BASE_DIR_PATH = Path(__file__).resolve().parents[1]
 
-def create_inference():
-    base_dir_path = Path(__file__).resolve().parents[1]
-    config_path =  f"{base_dir_path}/cfg/semantic_segmentation.toml"
+
+def create_inference(config_path=f"{BASE_DIR_PATH}/cfg/semantic_segmentation.toml"):
+    if len(config_path) == 0:
+        raise "no config file given"
     print(config_path)
     with open(str(config_path), "r") as f:
         config = toml.load(f)
@@ -37,10 +39,13 @@ def convert_img_dim(image):
 
 
 def get_overlay_rgb_image(rgb_image, mask, rgb_rate=0.6, mask_rate=0.4):
-    mask_image = np.zeros((mask.shape[0], mask.shape[1], 3), dtype=np.uint8)
-    nonzero_idx = np.where(mask>0)
-    mask_image[nonzero_idx[0], nonzero_idx[1], :] = (0, 0, 255)
-    rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-    segmentation_overlay_rgb = cv2.addWeighted(
-        rgb_image, rgb_rate, mask_image, mask_rate, 2.5)
+    if len(mask.shape) > 2:
+        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        segmentation_overlay_rgb = cv2.addWeighted(rgb_image, rgb_rate, mask, mask_rate, 2.5)
+    else:
+        mask_image = np.zeros((mask.shape[0], mask.shape[1], 3), dtype=np.uint8)
+        nonzero_idx = np.where(mask>0)
+        mask_image[nonzero_idx[0], nonzero_idx[1], :] = (0, 0, 255)
+        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        segmentation_overlay_rgb = cv2.addWeighted(rgb_image, rgb_rate, mask_image, mask_rate, 2.5)
     return segmentation_overlay_rgb
