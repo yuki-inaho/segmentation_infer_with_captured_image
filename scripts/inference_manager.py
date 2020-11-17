@@ -43,6 +43,7 @@ class InferSegmentation():
 
         # set inference mode
         self.model.eval()
+        self.model.freeze()
         torch.backends.cudnn.deterministic = True
 
         # set constant values
@@ -134,7 +135,7 @@ class SegmentationModels(pl.LightningModule):
         self.activation = activation
 
         # define model
-        _ARCHITECTURES = ['Unet', 'Linknet', 'FPN', 'PSPNet', 'PAN', 'DeepLabV3']
+        _ARCHITECTURES = ['Unet', 'Linknet', 'FPN', 'PSPNet', 'PAN', 'DeepLabV3', 'DeepLabV3Plus']
         assert self.architecture in _ARCHITECTURES, 'architecture=={0}, actual \'{1}\''.format(_ARCHITECTURES, self.architecture)
         if self.architecture == 'Unet':
             self.model = smp.Unet(encoder_name=self.encoder,
@@ -178,6 +179,14 @@ class SegmentationModels(pl.LightningModule):
             self.pad_unit = 2 ** self.depth
         elif self.architecture == 'DeepLabV3':
             self.model = smp.DeepLabV3(encoder_name=self.encoder,
+                                       encoder_weights=None,
+                                       encoder_depth=self.depth,
+                                       in_channels=self.in_channels,
+                                       classes=self.classes,
+                                       activation=self.activation)
+            self.pad_unit = 2 ** self.depth
+        elif self.architecture == 'DeepLabV3Plus':
+            self.model = smp.DeepLabV3Plus(encoder_name=self.encoder,
                                        encoder_weights=None,
                                        encoder_depth=self.depth,
                                        in_channels=self.in_channels,

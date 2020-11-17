@@ -24,6 +24,7 @@ dict_idx2color = {
     5: (84, 223, 255),  # Pole
 }
 
+
 def get_image(file_name, rgb_manager):
     image_bgr = cv2.imread(file_name)
     image = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
@@ -53,7 +54,6 @@ def get_image_pathes(input_data_dir):
     image_pathes = sorted([path for path in Path(input_data_dir).rglob('*') if path.suffix.lower() in exts])
     image_path_list = [str(image_path) for image_path in image_pathes]
     return image_path_list
-
 
 
 @click.command()

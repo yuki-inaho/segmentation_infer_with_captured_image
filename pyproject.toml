@@ -5,7 +5,7 @@ description = ""
 authors = ["yuki-inaho <yoshikawa@inaho.co>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.6"
 opencv-python = "4.2.0.34"
 click = "7.1.2"
 numpy = "1.16.6"
