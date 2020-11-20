@@ -29,6 +29,12 @@ def infer_image(image, inference):
     return mask_image
 
 
+def infer_and_generate_mask_image(image, inference):
+    mask_image_tmp = convert_img_dim(inference(add_dummy_dim(image)))
+    mask_image = (mask_image_tmp[:,:,0]).astype(np.uint8)
+    return mask_image
+
+
 def get_image_pathes(input_data_dir):
     image_pathes = Path(input_data_dir).glob("*.png")
     image_path_list = [str(image_path) for image_path in image_pathes]
@@ -56,10 +62,11 @@ def main(input_data_dir, output_data_dir, config_name, generate_only_mask):
         base_name = Path(image_path).name
         rgb_image = cv2.imread(image_path)
         bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
-        segmentation_mask = infer_image(bgr_image, inference)
         if generate_only_mask:
+            segmentation_mask = infer_and_generate_mask_image(bgr_image, inference)
             cv2.imwrite(f"{output_data_dir}/{base_name}", segmentation_mask)
         else:
+            segmentation_mask = infer_image(bgr_image, inference)
             rgb_image_masked = get_overlay_rgb_image(bgr_image, segmentation_mask)
             cv2.imwrite(f"{output_data_dir}/{base_name}", rgb_image_masked)
         cv2.waitKey(10)
