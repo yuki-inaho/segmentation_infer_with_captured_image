@@ -17,7 +17,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 
 
 dict_idx2color = {
-    0: (0, 0, 0),  
+    0: (0, 0, 0),
     1: (110, 110, 255),  # Oyagi
     2: (150, 249, 152),  # Aspara
     3: (255, 217, 81),  # Ground
