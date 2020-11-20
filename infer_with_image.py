@@ -36,7 +36,8 @@ def infer_and_generate_mask_image(image, inference):
 
 
 def get_image_pathes(input_data_dir):
-    image_pathes = Path(input_data_dir).glob("*.png")
+    exts = ['.jpg', '.png']
+    image_pathes = sorted([path for path in Path(input_data_dir).rglob('*') if path.suffix.lower() in exts])
     image_path_list = [str(image_path) for image_path in image_pathes]
     return image_path_list
 
@@ -56,7 +57,6 @@ def main(input_data_dir, output_data_dir, config_name, generate_only_mask):
     #torch.onnx.export(inference.model, dummy_input, "model.onnx", input_names=["input"], output_names=["output"], verbose=False, opset_version=11, operator_export_type=torch.onnx.OperatorExportTypes.ONNX)
     #from torch2trt import torch2trt
     #model_trt = torch2trt(inference.model, [dummy_input])
-
     image_path_list = get_image_pathes(input_data_dir)
     for image_path in tqdm(image_path_list):
         base_name = Path(image_path).name

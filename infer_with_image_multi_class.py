@@ -16,7 +16,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 
 
 dict_idx2color = {
-    0: (0, 0, 0),  
+    0: (0, 0, 0),
     1: (110, 110, 255),  # Oyagi
     2: (150, 249, 152),  # Aspara
     3: (255, 217, 81),  # Ground
@@ -49,6 +49,12 @@ def infer_image(image, inference):
     return mask_image
 
 
+def infer_and_generate_mask_image(image, inference):
+    mask_image_tmp = convert_img_dim(inference(add_dummy_dim(image)))
+    mask_image = (mask_image_tmp[:,:,0]).astype(np.uint8)
+    return mask_image
+
+
 def get_image_pathes(input_data_dir):
     exts = ['.jpg', '.png']
     image_pathes = sorted([path for path in Path(input_data_dir).rglob('*') if path.suffix.lower() in exts])
@@ -59,8 +65,9 @@ def get_image_pathes(input_data_dir):
 @click.command()
 @click.option("--input-data-dir", "-i", default=f"{SCRIPT_DIR}/data")
 @click.option("--output-data-dir", "-o", default=f"{SCRIPT_DIR}/output")
+@click.option("--generate-only-mask", "-m", is_flag=True)
 @click.option("--config-name", "-c", default=f"{SCRIPT_DIR}/cfg/semantic_segmentation_multi_class.toml")
-def main(input_data_dir, output_data_dir, config_name):
+def main(input_data_dir, output_data_dir, generate_only_mask, config_name):
     inference = create_inference(config_path=config_name)
     if not os.path.exists(output_data_dir):
         os.makedirs(output_data_dir)
@@ -71,10 +78,14 @@ def main(input_data_dir, output_data_dir, config_name):
         rgb_image = cv2.imread(image_path)
         bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
         #bgr_image = rgb_image.copy()
-        segmentation_mask = infer_image(bgr_image, inference)
-        rgb_image_masked = get_overlay_rgb_image(bgr_image, segmentation_mask)
+        if generate_only_mask:
+            segmentation_mask = infer_and_generate_mask_image(bgr_image, inference)
+            cv2.imwrite(f"{output_data_dir}/{base_name}", segmentation_mask)
+        else:
+            segmentation_mask = infer_image(bgr_image, inference)
+            rgb_image_masked = get_overlay_rgb_image(bgr_image, segmentation_mask)
+            cv2.imwrite(f"{output_data_dir}/{base_name}", rgb_image_masked)
         cv2.imwrite(f"{output_data_dir}/{base_name}", rgb_image_masked)
-        #cv2.imwrite(f"{output_data_dir}/{base_name}", segmentation_mask)
         cv2.waitKey(1)
 
 
