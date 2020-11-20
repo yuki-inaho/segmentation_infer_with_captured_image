@@ -77,7 +77,6 @@ def main(input_data_dir, output_data_dir, generate_only_mask, config_name):
         base_name = Path(image_path).name
         rgb_image = cv2.imread(image_path)
         bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
-        #bgr_image = rgb_image.copy()
         if generate_only_mask:
             segmentation_mask = infer_and_generate_mask_image(bgr_image, inference)
             cv2.imwrite(f"{output_data_dir}/{base_name}", segmentation_mask)
@@ -85,7 +84,6 @@ def main(input_data_dir, output_data_dir, generate_only_mask, config_name):
             segmentation_mask = infer_image(bgr_image, inference)
             rgb_image_masked = get_overlay_rgb_image(bgr_image, segmentation_mask)
             cv2.imwrite(f"{output_data_dir}/{base_name}", rgb_image_masked)
-        cv2.imwrite(f"{output_data_dir}/{base_name}", rgb_image_masked)
         cv2.waitKey(1)
 
 
