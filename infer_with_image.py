@@ -30,7 +30,8 @@ def infer_image(image, inference):
 
 
 def get_image_pathes(input_data_dir):
-    image_pathes = Path(input_data_dir).glob("*.png")
+    exts = ['.jpg', '.png']
+    image_pathes = sorted([path for path in Path(input_data_dir).rglob('*') if path.suffix.lower() in exts])
     image_path_list = [str(image_path) for image_path in image_pathes]
     return image_path_list
 
@@ -45,11 +46,11 @@ def main(input_data_dir, output_data_dir, config_name):
     if not os.path.exists(output_data_dir):
         os.makedirs(output_data_dir)
 
-    dummy_input = torch.randn(1, 3, 1024, 1024, device='cuda')
+    #dummy_input = torch.randn(1, 3, 1024, 1024, device='cuda')
     #torch.onnx.export(inference.model, dummy_input, "model.onnx", input_names=["input"], output_names=["output"], verbose=False, opset_version=11, operator_export_type=torch.onnx.OperatorExportTypes.ONNX)
-    from torch2trt import torch2trt
-    model_trt = torch2trt(inference.model, [dummy_input])
-    import pdb; pdb.set_trace()
+    #from torch2trt import torch2trt
+    #model_trt = torch2trt(inference.model, [dummy_input])
+    #import pdb; pdb.set_trace()
     
     image_path_list = get_image_pathes(input_data_dir)
     for image_path in tqdm(image_path_list):
