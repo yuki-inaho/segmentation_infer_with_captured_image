@@ -1,2 +1,0 @@
-nvidia-pyindex==1.0.5
-nvidia-tensorrt==7.2.1.6
