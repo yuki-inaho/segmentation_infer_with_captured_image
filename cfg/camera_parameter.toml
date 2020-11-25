@@ -1,0 +1,14 @@
+[Rgb]
+camera_name = "canera_rgb"
+width = 1280
+height = 720
+fps = 30
+device_id = "/dev/v4l/by-id/usb-e-con_Systems_See3CAM_CU20_180B0204-video-index0"
+fx = 875.74378335
+fy = 872.60434865
+cx = 599.56374701
+cy = 376.63457369
+k1 = 0.08366444
+k2 = 0.00143503
+k3 = -0.03410585
+k4 = 0.06129127
