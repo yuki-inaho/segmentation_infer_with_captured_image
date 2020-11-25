@@ -38,6 +38,7 @@ def infer_and_generate_mask_image(image, inference):
 def get_image_pathes(input_data_dir):
     exts = ['.jpg', '.png']
     image_pathes = sorted([path for path in Path(input_data_dir).rglob('*') if path.suffix.lower() in exts])
+    
     image_path_list = [str(image_path) for image_path in image_pathes]
     return image_path_list
 

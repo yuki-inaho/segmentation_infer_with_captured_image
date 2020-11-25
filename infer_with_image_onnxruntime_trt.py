@@ -6,9 +6,11 @@ from scripts.utils import (
     convert_img_dim
 )
 import click
+import time
 from pathlib import Path
 import numpy as np
 from torch.nn import functional as F
+import onnx_tensorrt.backend as backend
 
 import torch
 import tensorrt as trt
@@ -64,10 +66,10 @@ def transform_image(imgs_raw, depth=5):
     b, ch, rh, rw = imgs_resized.shape
     pad_w = 0 if (rw % pad_unit) == 0 else (pad_unit - (rw % pad_unit)) // 2
     pad_h = 0 if (rh % pad_unit) == 0 else (pad_unit - (rh % pad_unit)) // 2
-    # pad_w = (self.resize - rw) // 2
-    # pad_h = (self.resize - rh) // 2
-    pad_w += pad_unit // 2
-    pad_h += pad_unit // 2
+    pad_w = (resize - rw) // 2
+    pad_h = (resize - rh) // 2
+    #pad_w += pad_unit // 2
+    #pad_h += pad_unit // 2
     imgs_pdded = F.pad(input=imgs_resized, pad=[pad_w, pad_w, pad_h, pad_h], mode='constant', value=_PAD_VALUE)
 
     # normalize
@@ -77,34 +79,76 @@ def transform_image(imgs_raw, depth=5):
     return imgs_transformed
 
 
+
+def build_engine(model_file, max_ws=384 * 1024 * 1024, fp16=False):
+    print("building engine")
+    TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
+    builder = trt.Builder(TRT_LOGGER)
+    builder.fp16_mode = fp16
+    config = builder.create_builder_config()
+    config.max_workspace_size = max_ws
+    if fp16:
+        config.flags |= 1 << int(trt.BuilderFlag.FP16)
+
+    explicit_batch = 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
+    network = builder.create_network(explicit_batch)
+    with trt.OnnxParser(network, TRT_LOGGER) as parser:
+        with open(model_file, "rb") as model:
+            parsed = parser.parse(model.read())
+            print("network.num_layers", network.num_layers)
+            # last_layer = network.get_layer(network.num_layers - 1)
+            # network.mark_output(last_layer.get_output(0))
+            engine = builder.build_engine(network, config=config)
+            return engine
+
+
 @click.command()
 @click.option("--input-data-dir", "-i", default=f"{SCRIPT_DIR}/data")
 @click.option("--output-data-dir", "-o", default=f"{SCRIPT_DIR}/output")
 @click.option("--onnx-name", "-c", default=f"{SCRIPT_DIR}/model.onnx")
 def main(input_data_dir, output_data_dir, onnx_name):
-    sess = onnxruntime.InferenceSession(onnx_name)
+    #sess = onnxruntime.InferenceSession(onnx_name)
+
+    '''
+    so = onnxruntime.SessionOptions()
+    so.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+    sess = onnxruntime.InferenceSession(onnx_name, sess_options=so)
+    sess.set_providers(['CUDAExecutionProvider'])
     input_name = sess.get_inputs()[0].name
     label_name = sess.get_outputs()[0].name
-    print("The model expects input shape: ", sess.get_inputs()[0].shape)
+    '''
 
+    model = onnx.load(onnx_name)
+    #engine = build_engine(onnx_name)
+    engine = backend.prepare(model, device="CUDA:0")
+
+    #print("The model expects input shape: ", sess.get_inputs()[0].shape)
+    #sess.run(None, {input_name: np.random.rand(1, 3, 1024, 1024).astype(np.float32)})
+    
+    result = engine.run(np.random.rand(1, 3, 1024, 1024).astype(np.float32))[0]
     image_path_list = get_image_pathes(input_data_dir)
     for image_path in tqdm(image_path_list):
         base_name = Path(image_path).name
         rgb_image = cv2.imread(image_path)
         bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
 
-        #test = transform_image(add_dummy_dim(bgr_image))        
-        result = sess.run(None, {input_name: np.random.rand(1, 3, 1024, 1024).astype(np.float32)})
+        img_tfmd = transform_image(add_dummy_dim(bgr_image))        
+        img_tfmd_ary = img_tfmd.to('cpu').detach().numpy()
 
-        prob = result[0]
-        #import pdb; pdb.set_trace()
-        '''
-        mask_image_tmp = prob[0].argmax(0)
-        segmentation_mask = (mask_image_tmp*255).astype(np.uint8)
-        rgb_image_masked = get_overlay_rgb_image(bgr_image, segmentation_mask)
-        cv2.imwrite(f"{output_data_dir}/{base_name}", rgb_image_masked)
+        #test = add_dummy_dim(bgr_image)
+        #result = sess.run(None, {input_name: np.random.rand(1, 3, 1024, 1024).astype(np.float32)})
+
+        start = time.time()
+        result = engine.run(img_tfmd_ary.astype(np.float32))[0]
+        #result = sess.run(None, {input_name: img_tfmd_ary.astype(np.float32)})
+        end = time.time()
+        print(end-start)
+
+        prob = result[0][0]
+        label_img = (prob.argmax(0)*255).astype(np.uint8)
+        
+        cv2.imwrite(str(Path(output_data_dir, base_name)), label_img)
         cv2.waitKey(10)
-        '''
 
 if __name__ == "__main__":
     main()
