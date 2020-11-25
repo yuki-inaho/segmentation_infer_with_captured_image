@@ -1,7 +1,6 @@
 .venv
 scripts/__pycache__/
 poetry.lock
-cfg/
 data/
 output/
 mask/
