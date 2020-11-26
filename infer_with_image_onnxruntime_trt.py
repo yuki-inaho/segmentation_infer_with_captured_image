@@ -101,7 +101,17 @@ def build_engine(model_file, max_ws=384 * 1024 * 1024, fp16=False):
             engine = builder.build_engine(network, config=config)
             return engine
 
+def load_engine(engine_path):
+    with open(engine_path, "rb") as f, trt.Runtime(TRT_LOGGER) as runtime:
+        return runtime.deserialize_cuda_engine(f.read())
 
+def do_inference(context, bindings, inputs, outputs, stream, batch_size=1):
+    [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
+    context.execute(batch_size=batch_size, bindings=bindings)
+    [cuda.memcpy_dtoh(out.host, out.device) for out in outputs]
+    return [out.host for out in outputs]
+
+        
 @click.command()
 @click.option("--input-data-dir", "-i", default=f"{SCRIPT_DIR}/data")
 @click.option("--output-data-dir", "-o", default=f"{SCRIPT_DIR}/output")
@@ -111,21 +121,36 @@ def main(input_data_dir, output_data_dir, onnx_name):
 
     '''
     so = onnxruntime.SessionOptions()
-    so.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+    so.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENoABLE_ALL
     sess = onnxruntime.InferenceSession(onnx_name, sess_options=so)
     sess.set_providers(['CUDAExecutionProvider'])
     input_name = sess.get_inputs()[0].name
     label_name = sess.get_outputs()[0].name
     '''
 
-    model = onnx.load(onnx_name)
-    #engine = build_engine(onnx_name)
-    engine = backend.prepare(model, device="CUDA:0")
-
-    #print("The model expects input shape: ", sess.get_inputs()[0].shape)
-    #sess.run(None, {input_name: np.random.rand(1, 3, 1024, 1024).astype(np.float32)})
+    saved=False
+    if not saved:
+        model = onnx.load(onnx_name)
+        #engine = build_engine(onnx_name)
+        engine = backend.prepare(model, device="CUDA:0", max_batch_size=1,
+                                 max_workspace_size=1<<30)
+        with open('./engine.trt', 'wb') as f:
+            f.write(bytearray(engine.engine.engine.serialize()))
+        result = engine.run(np.random.rand(1, 3, 1024, 1024).astype(np.float16))[0]
+    else:
+        TRT_LOGGER = trt.Logger(trt.Logger.VERBOSE)
+        runtime = trt.Runtime(TRT_LOGGER)
+        with open('./engine.trt', 'rb') as f:
+            engine_bytes = f.read()
+            engine = runtime.deserialize_cuda_engine(engine_bytes)
+        context = engine.create_execution_context()
+        h_input = cuda.pagelocked_empty(trt.volume(engine.get_binding_shape(0)), dtype=trt.nptype(engine.get_binding_dtype(0)))
+        h_output = cuda.pagelocked_empty(trt.volume(engine.get_binding_shape(1)), dtype=trt.nptype(engine.get_binding_dtype(1)))
+        d_input = cuda.mem_alloc(h_input.nbytes)
+        d_output = cuda.mem_alloc(trt.volume(engine.get_binding_shape(1)) * 4)
+        stream = cuda.Stream()
+        
     
-    result = engine.run(np.random.rand(1, 3, 1024, 1024).astype(np.float32))[0]
     image_path_list = get_image_pathes(input_data_dir)
     for image_path in tqdm(image_path_list):
         base_name = Path(image_path).name
@@ -139,8 +164,15 @@ def main(input_data_dir, output_data_dir, onnx_name):
         #result = sess.run(None, {input_name: np.random.rand(1, 3, 1024, 1024).astype(np.float32)})
 
         start = time.time()
-        result = engine.run(img_tfmd_ary.astype(np.float32))[0]
-        #result = sess.run(None, {input_name: img_tfmd_ary.astype(np.float32)})
+        if saved:
+            np.copyto(h_input, img_tfmd_ary.astype(np.float16))
+            cuda.memcpy_htod_async(d_input, h_input, stream)
+            context.execute_async(bindings=[int(d_input), int(d_output)], stream_handle=stream.handle)
+            stream.synchronize()
+            cuda.memcpy_dtoh_async(h_output, d_output, stream)
+        else:
+            result = engine.run(img_tfmd_ary.astype(np.float16))[0]
+        #result = sess.run(None, {input_name: img_tfmd_ary.astype(np.float16)})
         end = time.time()
         print(end-start)
 
@@ -151,4 +183,5 @@ def main(input_data_dir, output_data_dir, onnx_name):
         cv2.waitKey(10)
 
 if __name__ == "__main__":
+
     main()

@@ -11,6 +11,7 @@ import numpy as np
 from scripts.rgb_manager import RGBImageManager
 from scripts.utils import get_overlay_rgb_image
 from tqdm import tqdm
+import time
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -66,7 +67,7 @@ def get_image_pathes(input_data_dir):
 @click.option("--input-data-dir", "-i", default=f"{SCRIPT_DIR}/data")
 @click.option("--output-data-dir", "-o", default=f"{SCRIPT_DIR}/output")
 @click.option("--generate-only-mask", "-m", is_flag=True)
-@click.option("--config-name", "-c", default=f"{SCRIPT_DIR}/cfg/semantic_segmentation_multi_class.toml")
+@click.option("--config-name", "-c", default=f"{SCRIPT_DIR}/cfg/semantic_segmentation.toml")
 def main(input_data_dir, output_data_dir, generate_only_mask, config_name):
     inference = create_inference(config_path=config_name)
     if not os.path.exists(output_data_dir):
@@ -77,13 +78,17 @@ def main(input_data_dir, output_data_dir, generate_only_mask, config_name):
         base_name = Path(image_path).name
         rgb_image = cv2.imread(image_path)
         bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+        start = time.time()
         if generate_only_mask:
             segmentation_mask = infer_and_generate_mask_image(bgr_image, inference)
+            end = time.time()            
             cv2.imwrite(f"{output_data_dir}/{base_name}", segmentation_mask)
         else:
             segmentation_mask = infer_image(bgr_image, inference)
             rgb_image_masked = get_overlay_rgb_image(bgr_image, segmentation_mask)
+            end = time.time()            
             cv2.imwrite(f"{output_data_dir}/{base_name}", rgb_image_masked)
+        print(end-start)
         cv2.waitKey(1)
 
 
