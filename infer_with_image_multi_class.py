@@ -1,10 +1,6 @@
 import os
 import cv2
-from scripts.utils import (
-    create_inference,
-    add_dummy_dim,
-    convert_img_dim
-)
+from scripts.utils import create_inference, add_dummy_dim, convert_img_dim
 import click
 from pathlib import Path
 import numpy as np
@@ -33,9 +29,7 @@ def get_image(file_name, rgb_manager):
 
 
 def colorize_mask(mask_image, n_label):
-    mask_colorized = np.zeros(
-        [mask_image.shape[0], mask_image.shape[1], 3], dtype=np.uint8
-    )
+    mask_colorized = np.zeros([mask_image.shape[0], mask_image.shape[1], 3], dtype=np.uint8)
     for l in range(n_label + 1):
         mask_indices_lth_label = np.where(mask_image == l)
         mask_colorized[mask_indices_lth_label[0], mask_indices_lth_label[1], :] = dict_idx2color[l]
@@ -44,20 +38,20 @@ def colorize_mask(mask_image, n_label):
 
 def infer_image(image, inference):
     mask_image_tmp = convert_img_dim(inference(add_dummy_dim(image)))
-    #mask_image = (mask_image_tmp*255).astype(np.uint8)
+    # mask_image = (mask_image_tmp*255).astype(np.uint8)
     mask_image = colorize_mask(mask_image_tmp, 5)
     return mask_image
 
 
 def infer_and_generate_mask_image(image, inference):
     mask_image_tmp = convert_img_dim(inference(add_dummy_dim(image)))
-    mask_image = (mask_image_tmp[:,:,0]).astype(np.uint8)
+    mask_image = (mask_image_tmp[:, :, 0]).astype(np.uint8)
     return mask_image
 
 
 def get_image_pathes(input_data_dir):
-    exts = ['.jpg', '.png']
-    image_pathes = sorted([path for path in Path(input_data_dir).rglob('*') if path.suffix.lower() in exts])
+    exts = [".jpg", ".png"]
+    image_pathes = sorted([path for path in Path(input_data_dir).rglob("*") if path.suffix.lower() in exts])
     image_path_list = [str(image_path) for image_path in image_pathes]
     return image_path_list
 
