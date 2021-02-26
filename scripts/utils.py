@@ -1,4 +1,5 @@
 import toml
+import shutil
 from pathlib import Path
 from scripts.inference_manager import InferSegmentation
 from scripts.class_info_manager import ClassInformationManager
@@ -6,6 +7,20 @@ import numpy as np
 import cv2
 
 BASE_DIR_PATH = Path(__file__).resolve().parents[1]
+
+
+def get_image_pathes(input_data_dir):
+    exts = [".jpg", ".png"]
+    image_pathes = sorted([path for path in Path(input_data_dir).glob("*") if path.suffix.lower() in exts])
+    image_path_list = [str(image_path) for image_path in image_pathes]
+    return image_path_list
+
+
+def mkdir_from_path(output_image_dir: str):
+    output_image_dir_path = Path(output_image_dir)
+    if output_image_dir_path.exists():
+        shutil.rmtree(output_image_dir)
+    output_image_dir_path.mkdir()
 
 
 def create_inference(config_path=f"{BASE_DIR_PATH}/cfg/semantic_segmentation.toml"):
