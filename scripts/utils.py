@@ -1,4 +1,3 @@
-import sys
 import toml
 from pathlib import Path
 from scripts.inference_manager import InferSegmentation
