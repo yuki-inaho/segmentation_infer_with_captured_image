@@ -2,3 +2,5 @@
 scripts/__pycache__/
 poetry.lock
 pyproject.toml
+output/
+data/
