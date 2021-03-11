@@ -1,0 +1,11 @@
+architecture = "Unet"
+encoder = "resnet34"
+depth = 5
+in_channels = 3
+classes = 6
+activation = "softmax"
+resize = 1024
+batch_size = 1
+gpu_id = -1
+weights = "/home/inaho/data/weights/weight_unet_resnet34_class5.ckpt"
+

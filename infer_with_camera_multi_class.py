@@ -1,14 +1,7 @@
-import os
 import cv2
-from scripts.utils import (
-    create_inference,
-    add_dummy_dim,
-    convert_img_dim
-)
+from scripts.utils import create_inference
 import click
-
 from pathlib import Path
-import numpy as np
 from scripts.rgb_manager import RGBCaptureManager
 from scripts.class_info_manager import ClassInformationManager
 from scripts.utils import get_overlay_rgb_image, infer_image
@@ -36,17 +29,15 @@ def main(toml_path, config_name, rgb_rate, class_definition_json):
         if rgb_manager.update():
             rgb_image = convert_image_to_infer(rgb_manager.read(), rgb_manager)
             segmentation_mask = infer_image(rgb_image, inference, class_manager)
-            rgb_image_masked = get_overlay_rgb_image(
-                rgb_image, segmentation_mask,
-                rgb_rate=rgb_rate, mask_rate=1-rgb_rate
-            )
+            rgb_image_masked = get_overlay_rgb_image(rgb_image, segmentation_mask, rgb_rate=rgb_rate, mask_rate=1 - rgb_rate)
             masked_image_resized = cv2.resize(rgb_image_masked, (1280, 720))
             cv2.imshow("Segmentation", masked_image_resized)
             cv2.waitKey(10)
         key = cv2.waitKey(10)
-        if key & 0xFF == ord('q'):
+        if key & 0xFF == ord("q"):
             break
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()

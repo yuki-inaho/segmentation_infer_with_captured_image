@@ -1,7 +1,7 @@
 .venv
+.mypy_cache/
 scripts/__pycache__/
 poetry.lock
-cfg/
-data/
+pyproject.toml
 output/
-mask/
+data/

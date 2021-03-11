@@ -134,10 +134,32 @@ class SegmentationModels(pl.LightningModule):
         self.activation = activation
 
         # define model
-        _ARCHITECTURES = ["Unet", "Linknet", "FPN", "PSPNet", "PAN", "DeepLabV3", "DeepLabV3Plus"]
+
+        _ARCHITECTURES = ["Unet", "UnetPlusPlus", "Linknet", "MAnet", "FPN", "PSPNet", "PAN", "DeepLabV3", "DeepLabV3Plus"]
         assert self.architecture in _ARCHITECTURES, "architecture=={0}, actual '{1}'".format(_ARCHITECTURES, self.architecture)
+
         if self.architecture == "Unet":
             self.model = smp.Unet(
+                encoder_name=self.encoder,
+                encoder_weights=None,
+                encoder_depth=self.depth,
+                in_channels=self.in_channels,
+                classes=self.classes,
+                activation=self.activation,
+            )
+            self.pad_unit = 2 ** self.depth
+        elif self.architecture == "UnetPlusPlus":
+            self.model = smp.UnetPlusPlus(
+                encoder_name=self.encoder,
+                encoder_weights=None,
+                encoder_depth=self.depth,
+                in_channels=self.in_channels,
+                classes=self.classes,
+                activation=self.activation,
+            )
+            self.pad_unit = 2 ** self.depth
+        elif self.architecture == "MAnet":
+            self.model = smp.MAnet(
                 encoder_name=self.encoder,
                 encoder_weights=None,
                 encoder_depth=self.depth,
